@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  daviz-crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: daviz-solutions-crm
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - GOOGLE_APPS_SCRIPT_URL=${GOOGLE_APPS_SCRIPT_URL:-}
+      - GOOGLE_APPS_SCRIPT_SHARED_SECRET=${GOOGLE_APPS_SCRIPT_SHARED_SECRET:-}
+      - CRM_HMAC_SECRET=${CRM_HMAC_SECRET:-}
+      - VITE_DEFAULT_TIMEZONE=Asia/Dubai
+      - VITE_DEFAULT_CURRENCY=AED
+      - VITE_COMPANY_NAME=DAVIZ Solutions
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
