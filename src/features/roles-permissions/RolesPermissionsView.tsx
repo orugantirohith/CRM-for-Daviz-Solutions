@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Save, RotateCcw, Plus, Check, AlertCircle } from 'lucide-react';
+import { Shield, ShieldCheck, Save, RotateCcw, Plus, Check, AlertCircle } from 'lucide-react';
 import { ModuleKey, RecordScope, UserProfile } from '../../types/crm';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../lib/permissions/permissionCheck';
 import { crmService } from '../../services/crmService';

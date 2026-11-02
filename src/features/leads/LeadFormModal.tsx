@@ -108,7 +108,7 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({
 
     const isPrivileged = currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager';
     const finalAssignedTo = isPrivileged ? assignedTo : (initialLead?.assigned_to || currentUser.id);
-    const assignedUser = allUsers.find((u) => u.id === finalAssignedTo) || currentUser;
+    const assignedUser: UserProfile | undefined = allUsers.find((u) => u.id === finalAssignedTo) || currentUser;
 
     if (initialLead) {
       crmService.updateLead(initialLead.id, {

@@ -1578,6 +1578,7 @@ class CRMRepository {
     passwordAttempt: string
   ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
     const raw = usernameOrEmail.trim().toLowerCase();
+    const norm = raw;
     const prefix = raw.includes('@') ? raw.split('@')[0] : raw;
     const altDomain = raw.endsWith('@daviz.ae')
       ? raw.replace('@daviz.ae', '@davizsolutions.com')

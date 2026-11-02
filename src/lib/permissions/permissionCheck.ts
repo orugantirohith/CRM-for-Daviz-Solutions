@@ -169,14 +169,7 @@ export function hasPermission(
  * Sales agents are strictly constrained to their own records.
  * Administrators have full access across all records.
  */
-export function filterRecordsByScope<T extends {
-  assigned_to?: string | null;
-  owner_id?: string | null;
-  visitor_id?: string | null;
-  created_by?: string | null;
-  actor_id?: string | null;
-  attendees?: string[];
-}>(
+export function filterRecordsByScope<T extends Record<string, any>>(
   records: T[],
   currentUser: { id: string; role_id: string },
   moduleKey: ModuleKey
@@ -201,6 +194,14 @@ export function filterRecordsByScope<T extends {
     return records;
   }
 
+  const matchAttendee = (attendees?: any[]): boolean => {
+    if (!Array.isArray(attendees)) return false;
+    return attendees.some((att) => {
+      if (typeof att === 'string') return att === currentUser.id;
+      return att?.user_id === currentUser.id;
+    });
+  };
+
   // If role has 'team' scope (Sales Manager sees team records)
   if (perm && perm.record_scope === 'team') {
     if (currentUser.role_id === 'sales_manager') {
@@ -208,7 +209,7 @@ export function filterRecordsByScope<T extends {
     }
     return records.filter((r) => {
       const ownerId = r.assigned_to || r.owner_id || r.visitor_id || r.created_by || r.actor_id;
-      return ownerId === currentUser.id;
+      return ownerId === currentUser.id || matchAttendee(r.attendees);
     });
   }
 
@@ -216,7 +217,7 @@ export function filterRecordsByScope<T extends {
   return records.filter((r) => {
     const ownerId = r.assigned_to || r.owner_id || r.visitor_id || r.created_by || r.actor_id;
     const isOwner = ownerId === currentUser.id;
-    const isAttendee = Array.isArray(r.attendees) && r.attendees.includes(currentUser.id);
+    const isAttendee = matchAttendee(r.attendees);
     return isOwner || isAttendee;
   });
 }
