@@ -197,6 +197,59 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             )}
           </button>
         </form>
+
+        {/* Quick Select Credentials Bar */}
+        <div className="mt-5 pt-4 border-t border-blue-900/40">
+          <p className="text-[11px] font-medium text-slate-400 text-center mb-2.5">
+            Quick Select Account (Click to Autofill)
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('nikita');
+                setPassword('Admin@123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/50 text-blue-200 text-left transition-colors flex items-center justify-between group cursor-pointer"
+            >
+              <span className="font-medium">Nikita</span>
+              <span className="text-[10px] text-blue-400 group-hover:text-blue-300">Agent</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('sonam');
+                setPassword('Admin@123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/50 text-blue-200 text-left transition-colors flex items-center justify-between group cursor-pointer"
+            >
+              <span className="font-medium">Sonam</span>
+              <span className="text-[10px] text-blue-400 group-hover:text-blue-300">Agent</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('ranga');
+                setPassword('Admin@123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/50 text-blue-200 text-left transition-colors flex items-center justify-between group cursor-pointer"
+            >
+              <span className="font-medium">Ranga</span>
+              <span className="text-[10px] text-emerald-400 group-hover:text-emerald-300">Manager</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('admin');
+                setPassword('Admin@123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/50 text-blue-200 text-left transition-colors flex items-center justify-between group cursor-pointer"
+            >
+              <span className="font-medium">Admin</span>
+              <span className="text-[10px] text-purple-400 group-hover:text-purple-300">Admin</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Brand Footer */}
