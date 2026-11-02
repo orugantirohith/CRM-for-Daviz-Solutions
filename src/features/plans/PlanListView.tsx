@@ -15,6 +15,7 @@ import { Plan, PlanStatus, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface PlanListViewProps {
   currentUser: UserProfile;
@@ -27,7 +28,10 @@ export const PlanListView: React.FC<PlanListViewProps> = ({ currentUser }) => {
   const [reviewDecision, setReviewDecision] = useState<'Approved' | 'Changes Requested'>('Approved');
 
   // Plan creation form
-  const leads = crmService.getLeads();
+  const leads = useMemo(
+    () => filterRecordsByScope(crmService.getLeads(), currentUser, 'leads'),
+    [currentUser]
+  );
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [planDate, setPlanDate] = useState('2026-10-28');
@@ -39,7 +43,8 @@ export const PlanListView: React.FC<PlanListViewProps> = ({ currentUser }) => {
   const [priority, setPriority] = useState<Plan['priority']>('high');
 
   const plans = useMemo(() => {
-    return crmService.getPlans();
+    const raw = crmService.getPlans();
+    return filterRecordsByScope(raw, currentUser, 'plans');
   }, [isModalOpen, selectedPlanForReview, currentUser]);
 
   const canReview = currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager';

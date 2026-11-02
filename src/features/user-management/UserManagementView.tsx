@@ -28,6 +28,20 @@ interface UserManagementViewProps {
 }
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentUser }) => {
+  if (currentUser.role_id !== 'admin') {
+    return (
+      <div className="p-8 max-w-lg mx-auto my-12 bg-white rounded-2xl border border-rose-200 shadow-sm text-center">
+        <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <Shield className="w-6 h-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900 mb-1">Administrator Access Required</h3>
+        <p className="text-xs text-slate-500 mb-2">
+          Only system administrators are authorized to access and modify user profiles.
+        </p>
+      </div>
+    );
+  }
+
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Filter states

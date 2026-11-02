@@ -4,6 +4,7 @@ import { Task, TaskStatus, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface TaskListViewProps {
   currentUser: UserProfile;
@@ -24,24 +25,27 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ currentUser }) => {
   const allUsers = crmService.getUsers();
 
   const tasks = useMemo(() => {
-    let result = crmService.getTasks();
+    let result = filterRecordsByScope(crmService.getTasks(), currentUser, 'tasks');
     if (statusFilter !== 'all') {
       result = result.filter((t) => t.status === statusFilter);
     }
     return result;
   }, [statusFilter, isModalOpen, currentUser, refreshKey]);
 
+  const isPrivileged = currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager';
+
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const assigned = allUsers.find((u) => u.id === assignedTo);
+    const finalAssignedTo = isPrivileged ? assignedTo : currentUser.id;
+    const assigned = allUsers.find((u) => u.id === finalAssignedTo);
 
     crmService.createTask({
       title: title.trim(),
       description: description.trim(),
-      assigned_to: assignedTo,
-      assigned_user_name: assigned?.display_name || 'Agent',
+      assigned_to: finalAssignedTo,
+      assigned_user_name: assigned?.display_name || currentUser.display_name,
       created_by: currentUser.id,
       created_by_name: currentUser.display_name,
       due_at: dueDate,
@@ -184,17 +188,26 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ currentUser }) => {
 
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Assignee</label>
-                <select
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg bg-white outline-none focus:border-cyan-500 font-medium"
-                >
-                  {allUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.display_name} ({u.role_name || u.role_id})
-                    </option>
-                  ))}
-                </select>
+                {isPrivileged ? (
+                  <select
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white outline-none focus:border-cyan-500 font-medium"
+                  >
+                    {allUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.display_name} ({u.role_name || u.role_id})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    disabled
+                    value={`${currentUser.display_name} (${currentUser.role_name || 'Sales Agent'})`}
+                    className="w-full p-2 border border-slate-200 bg-slate-100 rounded-lg text-slate-600 font-medium cursor-not-allowed"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

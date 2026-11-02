@@ -106,7 +106,9 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({
       }
     }
 
-    const assignedUser = allUsers.find((u) => u.id === assignedTo);
+    const isPrivileged = currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager';
+    const finalAssignedTo = isPrivileged ? assignedTo : (initialLead?.assigned_to || currentUser.id);
+    const assignedUser = allUsers.find((u) => u.id === finalAssignedTo) || currentUser;
 
     if (initialLead) {
       crmService.updateLead(initialLead.id, {
@@ -127,8 +129,8 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({
         address,
         estimated_value: Number(estimatedValue) || 0,
         lead_source: leadSource,
-        assigned_to: assignedTo,
-        assigned_user_name: assignedUser ? assignedUser.display_name : 'Agent',
+        assigned_to: finalAssignedTo,
+        assigned_user_name: assignedUser ? assignedUser.display_name : currentUser.display_name,
         priority,
         details: details.trim(),
         next_follow_up_at: nextFollowUpAt || null,
@@ -153,8 +155,8 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({
         estimated_value: Number(estimatedValue) || 0,
         lead_source: leadSource,
         status,
-        assigned_to: assignedTo,
-        assigned_user_name: assignedUser ? assignedUser.display_name : 'Agent',
+        assigned_to: finalAssignedTo,
+        assigned_user_name: assignedUser ? assignedUser.display_name : currentUser.display_name,
         priority,
         details: details.trim(),
         next_follow_up_at: nextFollowUpAt || null,
@@ -571,17 +573,26 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Assigned Agent</label>
-                  <select
-                    value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg bg-white outline-none focus:border-cyan-500"
-                  >
-                    {allUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.display_name}
-                      </option>
-                    ))}
-                  </select>
+                  {currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager' ? (
+                    <select
+                      value={assignedTo}
+                      onChange={(e) => setAssignedTo(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white outline-none focus:border-cyan-500"
+                    >
+                      {allUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      disabled
+                      value={currentUser.display_name}
+                      className="w-full p-2 border border-slate-200 bg-slate-100 rounded-lg text-slate-600 font-medium cursor-not-allowed"
+                    />
+                  )}
                 </div>
               </div>
 

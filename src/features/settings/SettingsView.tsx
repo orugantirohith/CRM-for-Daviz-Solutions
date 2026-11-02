@@ -32,6 +32,17 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser }) => {
+  if (currentUser.role_id !== 'admin') {
+    return (
+      <div className="p-8 max-w-lg mx-auto my-12 bg-white rounded-2xl border border-rose-200 shadow-sm text-center">
+        <h3 className="text-base font-bold text-slate-900 mb-1">Administrator Access Required</h3>
+        <p className="text-xs text-slate-500 mb-2">
+          Only system administrators are authorized to access and modify regional settings or migrations.
+        </p>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'migration' | 'branding' | 'ids' | 'statuses' | 'archive'>('migration');
   const [companyName, setCompanyName] = useState('DAVIZ Solutions');
   const [timezone] = useState('Asia/Dubai');

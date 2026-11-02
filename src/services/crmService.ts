@@ -1857,6 +1857,10 @@ class CRMRepository {
   }
 
   switchUser(userId: string): UserProfile {
+    // Only administrators are authorized to switch active user perspectives
+    if (this.currentUser && this.currentUser.role_id !== 'admin') {
+      throw new Error('Access Denied: Only administrators can switch user accounts.');
+    }
     const user = this.users.find((u) => u.id === userId);
     if (!user) throw new Error('User not found');
     this.setCurrentUser(user);

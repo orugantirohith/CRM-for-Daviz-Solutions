@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Lead, LeadStatus, ModuleKey, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
-import { hasPermission } from '../../lib/permissions/permissionCheck';
+import { hasPermission, filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 import { formatDubaiDateTime, formatWhatsAppLink } from '../../lib/dates/dubaiDate';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -163,16 +163,20 @@ export const SalesPipelineView: React.FC<SalesPipelineViewProps> = ({
 
   const allUsers = useMemo(() => crmService.getUsers(), [refreshKey]);
 
+  const isAgent = currentUser.role_id === 'sales_agent';
+  const effectiveAgentFilter = isAgent ? currentUser.id : agentFilter;
+
   const filteredLeads = useMemo(() => {
-    let list = crmService.getLeads({
-      assignedTo: agentFilter,
+    let raw = crmService.getLeads({
+      assignedTo: effectiveAgentFilter,
       search: searchQuery,
     });
+    let list = filterRecordsByScope(raw, currentUser, 'leads');
     if (priorityFilter !== 'all') {
       list = list.filter((l) => l.priority === priorityFilter);
     }
     return list;
-  }, [agentFilter, priorityFilter, searchQuery, refreshKey, currentUser]);
+  }, [effectiveAgentFilter, priorityFilter, searchQuery, refreshKey, currentUser]);
 
   const visibleStages = useMemo(() => {
     if (focusedStage === 'all') return PIPELINE_STAGES;

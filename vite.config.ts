@@ -1,7 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -36,8 +39,8 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
-        '@supabase/phoenix': path.resolve(__dirname, 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js'),
+        '@': path.resolve(currentDir, '.'),
+        '@supabase/phoenix': path.resolve(currentDir, 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js'),
       },
     },
     optimizeDeps: {

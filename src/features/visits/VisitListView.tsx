@@ -16,6 +16,7 @@ import { crmService } from '../../services/crmService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface VisitListViewProps {
   currentUser: UserProfile;
@@ -30,7 +31,10 @@ export const VisitListView: React.FC<VisitListViewProps> = ({ currentUser }) => 
   const [selectedVisitForDetail, setSelectedVisitForDetail] = useState<Visit | null>(null);
   const [visitToDelete, setVisitToDelete] = useState<Visit | null>(null);
 
-  const leads = useMemo(() => crmService.getLeads(), [refreshKey, isModalOpen, currentUser]);
+  const leads = useMemo(
+    () => filterRecordsByScope(crmService.getLeads(), currentUser, 'leads'),
+    [refreshKey, isModalOpen, currentUser]
+  );
 
   const [selectedLeadId, setSelectedLeadId] = useState<string>(leads[0]?.id || 'manual');
   const [manualCompanyName, setManualCompanyName] = useState<string>('');
@@ -51,7 +55,7 @@ export const VisitListView: React.FC<VisitListViewProps> = ({ currentUser }) => 
   const activeLead = leads.find((l) => l.id === selectedLeadId);
 
   const visits = useMemo(() => {
-    let result = crmService.getVisits();
+    let result = filterRecordsByScope(crmService.getVisits(), currentUser, 'visits');
     if (statusFilter !== 'all') {
       result = result.filter((v) => v.status === statusFilter);
     }
@@ -72,14 +76,17 @@ export const VisitListView: React.FC<VisitListViewProps> = ({ currentUser }) => 
     return result;
   }, [statusFilter, outcomeFilter, searchQuery, isModalOpen, refreshKey, currentUser]);
 
-  const allVisits = crmService.getVisits();
+  const allVisits = useMemo(
+    () => filterRecordsByScope(crmService.getVisits(), currentUser, 'visits'),
+    [refreshKey, isModalOpen, currentUser]
+  );
   const kpiTotal = allVisits.length;
   const kpiCompleted = allVisits.filter((v) => v.status === 'Completed').length;
   const kpiPositive = allVisits.filter((v) => v.outcome === 'Positive').length;
   const kpiFollowUp = allVisits.filter((v) => v.follow_up_required).length;
 
   const handleOpenCreateModal = () => {
-    const currentLeads = crmService.getLeads();
+    const currentLeads = filterRecordsByScope(crmService.getLeads(), currentUser, 'leads');
     if (currentLeads.length > 0) {
       setSelectedLeadId(currentLeads[0].id);
       setLocation(`${currentLeads[0].city}, ${currentLeads[0].emirate_state}`);

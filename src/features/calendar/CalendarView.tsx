@@ -14,6 +14,7 @@ import {
 import { CalendarEvent, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
 import { formatDubaiDateTime, getDubaiCurrentDate } from '../../lib/dates/dubaiDate';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface CalendarViewProps {
   currentUser: UserProfile;
@@ -28,7 +29,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form
-  const leads = crmService.getLeads();
+  const leads = useMemo(
+    () => filterRecordsByScope(crmService.getLeads(), currentUser, 'leads'),
+    [currentUser]
+  );
   const allUsers = crmService.getUsers();
 
   const [title, setTitle] = useState('');
@@ -42,7 +46,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser }) => {
   const [linkedLeadId, setLinkedLeadId] = useState(leads[0]?.id || '');
 
   const events = useMemo(() => {
-    return crmService.getCalendarEvents();
+    const raw = crmService.getCalendarEvents();
+    return filterRecordsByScope(raw, currentUser, 'calendar');
   }, [isModalOpen, currentUser]);
 
   const selectedDateEvents = useMemo(() => {

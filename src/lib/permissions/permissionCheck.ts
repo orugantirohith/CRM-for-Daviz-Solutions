@@ -163,3 +163,60 @@ export function hasPermission(
 
   return true;
 }
+
+/**
+ * Filters a list of records according to the user's role-based record_scope.
+ * Sales agents are strictly constrained to their own records.
+ * Administrators have full access across all records.
+ */
+export function filterRecordsByScope<T extends {
+  assigned_to?: string | null;
+  owner_id?: string | null;
+  visitor_id?: string | null;
+  created_by?: string | null;
+  actor_id?: string | null;
+  attendees?: string[];
+}>(
+  records: T[],
+  currentUser: { id: string; role_id: string },
+  moduleKey: ModuleKey
+): T[] {
+  if (!records || !Array.isArray(records)) return [];
+  if (!currentUser) return [];
+
+  // Administrators can view all records across all modules
+  if (currentUser.role_id === 'admin') {
+    return records;
+  }
+
+  const perm = DEFAULT_ROLE_PERMISSIONS[currentUser.role_id]?.[moduleKey];
+
+  // If role is denied view permission on this module, return empty list
+  if (perm && !perm.can_view) {
+    return [];
+  }
+
+  // If role has 'all' scope for this module (e.g. companies directory)
+  if (perm && perm.record_scope === 'all') {
+    return records;
+  }
+
+  // If role has 'team' scope (Sales Manager sees team records)
+  if (perm && perm.record_scope === 'team') {
+    if (currentUser.role_id === 'sales_manager') {
+      return records;
+    }
+    return records.filter((r) => {
+      const ownerId = r.assigned_to || r.owner_id || r.visitor_id || r.created_by || r.actor_id;
+      return ownerId === currentUser.id;
+    });
+  }
+
+  // Default 'own' scope: Sales Agents strictly see ONLY their own records
+  return records.filter((r) => {
+    const ownerId = r.assigned_to || r.owner_id || r.visitor_id || r.created_by || r.actor_id;
+    const isOwner = ownerId === currentUser.id;
+    const isAttendee = Array.isArray(r.attendees) && r.attendees.includes(currentUser.id);
+    return isOwner || isAttendee;
+  });
+}

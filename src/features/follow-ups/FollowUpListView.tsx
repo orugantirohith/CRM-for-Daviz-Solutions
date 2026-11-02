@@ -3,6 +3,7 @@ import { Clock, Plus, CheckCircle2, Trash2 } from 'lucide-react';
 import { FollowUp, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface FollowUpListViewProps {
   currentUser: UserProfile;
@@ -15,7 +16,10 @@ export const FollowUpListView: React.FC<FollowUpListViewProps> = ({ currentUser 
   const [completingFollowUp, setCompletingFollowUp] = useState<FollowUp | null>(null);
   const [outcomeNote, setOutcomeNote] = useState('');
 
-  const leads = useMemo(() => crmService.getLeads(), [refreshKey, isModalOpen, currentUser]);
+  const leads = useMemo(
+    () => filterRecordsByScope(crmService.getLeads(), currentUser, 'leads'),
+    [refreshKey, isModalOpen, currentUser]
+  );
   const [linkedLeadId, setLinkedLeadId] = useState(leads[0]?.id || 'manual');
   const [manualCompanyName, setManualCompanyName] = useState('');
   const [manualContactName, setManualContactName] = useState('');
@@ -25,7 +29,7 @@ export const FollowUpListView: React.FC<FollowUpListViewProps> = ({ currentUser 
   const [priority, setPriority] = useState<FollowUp['priority']>('high');
 
   const followUps = useMemo(() => {
-    let result = crmService.getFollowUps();
+    let result = filterRecordsByScope(crmService.getFollowUps(), currentUser, 'follow_ups');
     if (statusFilter !== 'all') {
       result = result.filter((f) => f.status === statusFilter);
     }
@@ -33,7 +37,7 @@ export const FollowUpListView: React.FC<FollowUpListViewProps> = ({ currentUser 
   }, [statusFilter, completingFollowUp, isModalOpen, refreshKey, currentUser]);
 
   const handleOpenCreate = () => {
-    const currentLeads = crmService.getLeads();
+    const currentLeads = filterRecordsByScope(crmService.getLeads(), currentUser, 'leads');
     setLinkedLeadId(currentLeads[0]?.id || 'manual');
     setManualCompanyName('');
     setManualContactName('');

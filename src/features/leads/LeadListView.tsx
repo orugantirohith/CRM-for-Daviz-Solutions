@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Lead, LeadStatus, ModuleKey, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
-import { hasPermission } from '../../lib/permissions/permissionCheck';
+import { hasPermission, filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ActionColumn } from '../../components/ui/ActionColumn';
@@ -71,22 +71,30 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
 
   const allUsers = useMemo(() => crmService.getUsers(), []);
 
+  const isAgent = currentUser.role_id === 'sales_agent';
+  const effectiveAgentFilter = isAgent ? currentUser.id : agentFilter;
+
   const leads = useMemo(() => {
-    return crmService.getLeads({
-      assignedTo: agentFilter,
+    const raw = crmService.getLeads({
+      assignedTo: effectiveAgentFilter,
       status: statusFilter === 'all' ? undefined : (statusFilter as LeadStatus),
       search: searchQuery,
     });
-  }, [agentFilter, statusFilter, searchQuery, refreshKey, currentUser]);
+    return filterRecordsByScope(raw, currentUser, 'leads');
+  }, [effectiveAgentFilter, statusFilter, searchQuery, refreshKey, currentUser]);
 
-  // Lead KPI counts
-  const allLeads = crmService.getLeads();
-  const kpiNew = allLeads.filter((l) => l.status === 'New').length;
-  const kpiConnected = allLeads.filter((l) => l.status === 'Connected').length;
-  const kpiQualified = allLeads.filter((l) => l.status === 'Qualified').length;
-  const kpiMeeting = allLeads.filter((l) => l.status === 'Meeting').length;
-  const kpiProposal = allLeads.filter((l) => l.status === 'Proposal Sent').length;
-  const kpiWon = allLeads.filter((l) => l.status === 'Won').length;
+  // Lead KPI counts computed strictly on scoped leads
+  const scopedAllLeads = useMemo(() => {
+    const raw = crmService.getLeads();
+    return filterRecordsByScope(raw, currentUser, 'leads');
+  }, [refreshKey, currentUser]);
+
+  const kpiNew = scopedAllLeads.filter((l) => l.status === 'New').length;
+  const kpiConnected = scopedAllLeads.filter((l) => l.status === 'Connected').length;
+  const kpiQualified = scopedAllLeads.filter((l) => l.status === 'Qualified').length;
+  const kpiMeeting = scopedAllLeads.filter((l) => l.status === 'Meeting').length;
+  const kpiProposal = scopedAllLeads.filter((l) => l.status === 'Proposal Sent').length;
+  const kpiWon = scopedAllLeads.filter((l) => l.status === 'Won').length;
 
   const handleStatusChangeSubmit = (newStatus: LeadStatus, note: string) => {
     if (!selectedLeadForStatus) return;

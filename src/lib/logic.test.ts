@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatRecordId, isValidRecordId, parseRecordId } from './ids/idGenerator';
-import { hasPermission, DEFAULT_ROLE_PERMISSIONS } from './permissions/permissionCheck';
+import { hasPermission, filterRecordsByScope, DEFAULT_ROLE_PERMISSIONS } from './permissions/permissionCheck';
 import { isValidOtpFormat, checkOtpExpiry, validateOtpAttempt, OTP_CONFIG } from './validation/otpRules';
 import { formatAED, formatWhatsAppLink, getDubaiYearMonth } from './dates/dubaiDate';
 
@@ -43,6 +43,75 @@ test('Permissions: Sales Agent cannot view another agent record when record_scop
 
   const ownCtx = { userId: 'agent-1', roleId: 'sales_agent', recordOwnerId: 'agent-1' };
   assert.equal(hasPermission('leads', 'view', ownCtx), true);
+});
+
+test('filterRecordsByScope: Sales Agent sees ONLY their own records for leads, visits, tasks, follow-ups', () => {
+  const agentUser = { id: 'agent-10', role_id: 'sales_agent' };
+  const mockLeads = [
+    { id: 'l1', assigned_to: 'agent-10', created_by: 'admin-1' },
+    { id: 'l2', assigned_to: 'agent-99', created_by: 'agent-99' },
+    { id: 'l3', assigned_to: 'agent-10', created_by: 'agent-10' },
+  ];
+  const scopedLeads = filterRecordsByScope(mockLeads, agentUser, 'leads');
+  assert.equal(scopedLeads.length, 2);
+  assert.equal(scopedLeads.every((l) => l.assigned_to === 'agent-10'), true);
+
+  const mockVisits = [
+    { id: 'v1', visitor_id: 'agent-10', created_by: 'agent-10' },
+    { id: 'v2', visitor_id: 'agent-99', created_by: 'agent-99' },
+  ];
+  const scopedVisits = filterRecordsByScope(mockVisits, agentUser, 'visits');
+  assert.equal(scopedVisits.length, 1);
+  assert.equal(scopedVisits[0].id, 'v1');
+
+  const mockTasks = [
+    { id: 't1', assigned_to: 'agent-10', created_by: 'admin-1' },
+    { id: 't2', assigned_to: 'agent-99', created_by: 'agent-99' },
+  ];
+  const scopedTasks = filterRecordsByScope(mockTasks, agentUser, 'tasks');
+  assert.equal(scopedTasks.length, 1);
+  assert.equal(scopedTasks[0].id, 't1');
+});
+
+test('filterRecordsByScope: Admin sees all records across all modules', () => {
+  const adminUser = { id: 'admin-1', role_id: 'admin' };
+  const mockLeads = [
+    { id: 'l1', assigned_to: 'agent-10' },
+    { id: 'l2', assigned_to: 'agent-99' },
+  ];
+  const scoped = filterRecordsByScope(mockLeads, adminUser, 'leads');
+  assert.equal(scoped.length, 2);
+});
+
+test('User Switching: Sales Agent is blocked from switching users; Administrator is permitted', async () => {
+  const { crmService } = await import('../services/crmService');
+  const admin = crmService.getUsers().find((u) => u.role_id === 'admin') || crmService.getCurrentUser();
+  let agent = crmService.getUsers().find((u) => u.role_id === 'sales_agent');
+  if (!agent) {
+    agent = crmService.createUser({
+      username: 'agent_test_security',
+      display_name: 'Test Agent',
+      email: 'test_agent@daviz.ae',
+      role_id: 'sales_agent',
+    });
+  }
+
+  // Set active user as agent
+  crmService.setCurrentUser(agent);
+  assert.throws(
+    () => {
+      crmService.switchUser(admin.id);
+    },
+    /Access Denied: Only administrators can switch user accounts./
+  );
+
+  // Set active user as admin -> switching permitted
+  crmService.setCurrentUser(admin);
+  const switched = crmService.switchUser(agent.id);
+  assert.equal(switched.id, agent.id);
+
+  // Restore active user as admin
+  crmService.setCurrentUser(admin);
 });
 
 test('Permissions: Sales Manager can view team leads and export', () => {

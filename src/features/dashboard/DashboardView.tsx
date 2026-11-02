@@ -18,6 +18,7 @@ import { LeadStatus, ModuleKey, UserProfile } from '../../types/crm';
 import { crmService } from '../../services/crmService';
 import { formatDubaiDateTime } from '../../lib/dates/dubaiDate';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { filterRecordsByScope } from '../../lib/permissions/permissionCheck';
 
 interface DashboardViewProps {
   currentUser: UserProfile;
@@ -32,10 +33,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToModule,
   onSelectLead,
 }) => {
-  const leads = useMemo(() => crmService.getLeads(), [currentUser]);
-  const visits = useMemo(() => crmService.getVisits(), [currentUser]);
-  const followUps = useMemo(() => crmService.getFollowUps(), [currentUser]);
-  const activityLogs = useMemo(() => crmService.getActivityLogs(), [currentUser]);
+  const leads = useMemo(() => {
+    const raw = crmService.getLeads();
+    return filterRecordsByScope(raw, currentUser, 'leads');
+  }, [currentUser]);
+
+  const visits = useMemo(() => {
+    const raw = crmService.getVisits();
+    return filterRecordsByScope(raw, currentUser, 'visits');
+  }, [currentUser]);
+
+  const followUps = useMemo(() => {
+    const raw = crmService.getFollowUps();
+    return filterRecordsByScope(raw, currentUser, 'follow_ups');
+  }, [currentUser]);
+
+  const activityLogs = useMemo(() => {
+    const raw = crmService.getActivityLogs();
+    if (currentUser.role_id === 'admin') return raw;
+    return raw.filter((a) => a.actor_id === currentUser.id);
+  }, [currentUser]);
+
   const allUsers = useMemo(() => crmService.getUsers(), []);
 
   // Compute live KPIs
@@ -278,54 +296,101 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Team Performance & Recent Activity */}
+        {/* Team Performance for Admin/Manager OR Personal Milestones for Agent */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">Team Activity</h3>
-              <Activity className="w-4 h-4 text-slate-400" />
-            </div>
+          {currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager' ? (
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900">Team Activity</h3>
+                <Activity className="w-4 h-4 text-slate-400" />
+              </div>
 
-            <div className="mt-4 space-y-3">
-              {allUsers.map((u) => {
-                const userLeads = leads.filter((l) => l.assigned_to === u.id).length;
-                const userVisits = visits.filter((v) => v.assigned_to === u.id).length;
-                return (
-                  <div
-                    key={u.id}
-                    className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <span className="font-semibold text-slate-800 block">{u.display_name}</span>
-                      <span className="text-[10px] text-slate-400 capitalize">
-                        {u.role_name || u.role_id}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-right">
+              <div className="mt-4 space-y-3">
+                {allUsers.map((u) => {
+                  const userLeads = leads.filter((l) => l.assigned_to === u.id).length;
+                  const userVisits = visits.filter((v) => v.assigned_to === u.id || v.created_by === u.id).length;
+                  return (
+                    <div
+                      key={u.id}
+                      className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs"
+                    >
                       <div>
-                        <span className="text-[10px] text-slate-400 block">Leads</span>
-                        <span className="font-bold text-slate-800">{userLeads}</span>
+                        <span className="font-semibold text-slate-800 block">{u.display_name}</span>
+                        <span className="text-[10px] text-slate-400 capitalize">
+                          {u.role_name || u.role_id}
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Visits</span>
-                        <span className="font-bold text-cyan-600">{userVisits}</span>
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Leads</span>
+                          <span className="font-bold text-slate-800">{userLeads}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Visits</span>
+                          <span className="font-bold text-cyan-600">{userVisits}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">My Sales Execution</h3>
+                  <p className="text-[11px] text-slate-400">Personal assigned targets & pipeline</p>
+                </div>
+                <Activity className="w-4 h-4 text-cyan-600" />
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="p-3.5 rounded-xl bg-cyan-50/50 border border-cyan-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Assigned Leads</span>
+                    <span className="text-[10px] text-slate-500">Active pipeline accounts</span>
+                  </div>
+                  <span className="text-lg font-bold text-cyan-800 font-mono">{totalLeads}</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Won / In-Progress</span>
+                    <span className="text-[10px] text-slate-500">Proposal & Won contracts</span>
+                  </div>
+                  <span className="text-lg font-bold text-emerald-800 font-mono">{wonLeads + proposalLeads}</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Client Visits Logged</span>
+                    <span className="text-[10px] text-slate-500">Physical field meetings</span>
+                  </div>
+                  <span className="text-lg font-bold text-amber-800 font-mono">{todayVisits}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-5 pt-3 border-t border-slate-100 text-center">
-            <button
-              type="button"
-              onClick={() => onNavigateToModule('activity_logs')}
-              className="text-xs text-cyan-600 hover:text-cyan-700 font-semibold inline-flex items-center gap-1"
-            >
-              <span>View Full Audit Trail</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {currentUser.role_id === 'admin' || currentUser.role_id === 'sales_manager' ? (
+              <button
+                type="button"
+                onClick={() => onNavigateToModule('activity_logs')}
+                className="text-xs text-cyan-600 hover:text-cyan-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Full Audit Trail</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigateToModule('pipeline')}
+                className="text-xs text-cyan-600 hover:text-cyan-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+              >
+                <span>View My Pipeline Deals</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
