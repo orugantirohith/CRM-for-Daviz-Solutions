@@ -1,3 +1,4 @@
+import fs from 'fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -5,6 +6,8 @@ import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const phoenixPath = path.resolve(currentDir, 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js');
+const phoenixExists = fs.existsSync(phoenixPath);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -40,11 +43,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(currentDir, '.'),
-        '@supabase/phoenix': path.resolve(currentDir, 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js'),
+        ...(phoenixExists ? { '@supabase/phoenix': phoenixPath } : {}),
       },
     },
     optimizeDeps: {
-      include: ['@supabase/supabase-js', '@supabase/phoenix'],
+      include: ['@supabase/supabase-js'],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
